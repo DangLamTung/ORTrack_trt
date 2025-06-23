@@ -1,0 +1,1 @@
+/usr/bin/tensorrt/trtexec --onnx=./model_ortrack_distill_sim.onnx --saveEngine=model_ortrack_distill_sim.trt  --best --verbose --useCudaGraph
