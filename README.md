@@ -3,7 +3,10 @@ ORTrack:  Learning Occlusion-Robust Vision Transformers for Real-Time UAV Tracki
 
 Here, the ORTrack tracking algorithm with onnx and TensorRT convert code is provided
 
-Archived ~430FPS on GTX1650 and ~100FPS on Jetson Xavier NX (distilled model)
+Archived ~430FPS on GTX1650 and ~100FPS on Jetson Xavier NX (distilled model) and ~200FPS on GTX1650 and ~80FPS on Jetson with non distilled model
+
+Video Demo:
+
 
 
 # 1. How to build and run it?
