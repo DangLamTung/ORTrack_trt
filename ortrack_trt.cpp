@@ -74,7 +74,13 @@ void ORTrackTRT::deserialize_engine(std::string &engine_name){
     assert(context != nullptr);
     // delete[] trt_model_stream;
 }
-
+	struct Binding
+	{
+		size_t size = 1;
+		size_t dsize = 1;
+		nvinfer1::Dims dims;
+		std::string name;
+	};
 void ORTrackTRT::infer(
     float *input_imt,
     float *input_imsearch,
@@ -85,26 +91,43 @@ void ORTrackTRT::infer(
 {
     assert(engine->getNbBindings() == 7);
     void* buffers[7];
-    
+    // These are non essential variable
+    float *output_backbone_feat;
+    float *output_size_map;
+    float *output_offset_map;
+ 
+
+    // Get input binding index
     const int inputImgtIndex = engine->getBindingIndex(INPUT_BLOB_IMGT_NAME);
-    // std::cout << ">>>debug infer start. " << (engine->getBindingDataType(inputImgtIndex) == nvinfer1::DataType::kFLOAT) << std::endl;
     assert(engine->getBindingDataType(inputImgtIndex) == nvinfer1::DataType::kFLOAT);
     const int inputImgsearchIndex = engine->getBindingIndex(INPUT_BLOB_IMGSEARCH_NAME);
     assert(engine->getBindingDataType(inputImgsearchIndex) == nvinfer1::DataType::kFLOAT);
-
+    // Get output binding index
     const int outputPredboxesIndex = engine->getBindingIndex(OUTPUT_BLOB_PREDBOXES_NAME);
     assert(engine->getBindingDataType(outputPredboxesIndex) == nvinfer1::DataType::kFLOAT);
     const int outputPredscoresIndex = engine->getBindingIndex(OUTPUT_BLOB_PREDSCORES_NAME);
     assert(engine->getBindingDataType(outputPredscoresIndex) == nvinfer1::DataType::kFLOAT);
+    const int outputBackboneIndex = engine->getBindingIndex(OUTPUT_BLOB_BACKBONE_FEAT_NAME);
+    assert(engine->getBindingDataType(outputBackboneIndex) == nvinfer1::DataType::kFLOAT);
+    const int outputOffsetIndex = engine->getBindingIndex(OUTPUT_BLOB_OFFSET_NAME);
+    assert(engine->getBindingDataType(outputOffsetIndex) == nvinfer1::DataType::kFLOAT);
+    const int outputSizemapIndex = engine->getBindingIndex(OUTPUT_BLOB_SIZEMAP_NAME);
+    assert(engine->getBindingDataType(outputSizemapIndex) == nvinfer1::DataType::kFLOAT);
+
 
     int mBatchSize = engine->getMaxBatchSize();
     
-    // create gpu buffer on devices
+    // create gpu buffer for input
     CHECK(cudaMalloc(&buffers[inputImgtIndex], 3 * input_imt_shape.height * input_imt_shape.width * sizeof(float)));
     CHECK(cudaMalloc(&buffers[inputImgsearchIndex], 3 * input_imsearch_shape.height * input_imsearch_shape.width * sizeof(float)));
+
+    //output buffer malloc - this should be global instead, but as far as I tested, the performance is not that different from global allocation
     CHECK(cudaMalloc(&buffers[outputPredboxesIndex], this->output_pred_boxes_size * sizeof(float)));
     CHECK(cudaMalloc(&buffers[outputPredscoresIndex], this->output_pred_scores_size * sizeof(float)));
-   
+
+    CHECK(cudaMalloc(&buffers[outputBackboneIndex], 320*160 * sizeof(float)));
+    CHECK(cudaMalloc(&buffers[outputOffsetIndex], 2*16*16 * sizeof(float)));
+    CHECK(cudaMalloc(&buffers[outputSizemapIndex], 2*16*16 * sizeof(float)));
     // create stream
     CHECK(cudaStreamCreate(&stream));
        
@@ -122,8 +145,13 @@ void ORTrackTRT::infer(
     // release buffers
     CHECK(cudaFree(buffers[inputImgtIndex]));
     CHECK(cudaFree(buffers[inputImgsearchIndex]));
+
     CHECK(cudaFree(buffers[outputPredboxesIndex]));
     CHECK(cudaFree(buffers[outputPredscoresIndex]));
+    CHECK(cudaFree(buffers[outputBackboneIndex]));
+    CHECK(cudaFree(buffers[outputOffsetIndex]));
+    CHECK(cudaFree(buffers[outputSizemapIndex]));
+    
     // std::cout << ">>>debug infer end. "  << std::endl;
 }
 
@@ -214,6 +242,9 @@ const DrOBB &ORTrackTRT::track(const cv::Mat &img)
     cv::Size input_imt_shape = this->z_patch.size();
     cv::Size input_imsearch_shape = x_patch.size();
     
+
+
+    // std::cout << "IMAGE SIZE " << input_imt_shape << " " << input_imsearch_shape << "\n";
     this->infer(input_imt, input_imsearch, 
               output_pred_boxes, output_pred_scores, 
               input_imt_shape, 
@@ -228,7 +259,7 @@ const DrOBB &ORTrackTRT::track(const cv::Mat &img)
     this->cal_bbox(output_pred_boxes, output_pred_scores, pred_box, pred_score, resize_factor);
    
     this->map_box_back(pred_box, resize_factor);
-     std::cout << "OUTPUT DATA FROM MODEL " << pred_box.x0 << " " <<pred_box.y0 << " " << pred_box.x1 << " " << pred_box.y1 << "\n";
+    //  std::cout << "OUTPUT DATA FROM MODEL " << pred_box.x0 << " " <<pred_box.y0 << " " << pred_box.x1 << " " << pred_box.y1 << "\n";
     this->clip_box(pred_box, img.rows, img.cols, 10);
     
     object_box.box = pred_box;
@@ -329,7 +360,7 @@ void ORTrackTRT::sample_target(const cv::Mat &im, cv::Mat &croped, DrBBox target
    cv::Rect roi_rect(x1+x1_pad, y1+y1_pad, (x2-x2_pad)-(x1+x1_pad), (y2-y2_pad)-(y1+y1_pad));
    cv::Mat roi = im(roi_rect);
 
-   // Pad
+   // Padding - this is very costly
    cv::copyMakeBorder(roi, croped, y1_pad, y2_pad, x1_pad, x2_pad, cv::BORDER_CONSTANT);
 std::cout << "cal_bbox cx cy w h "<<x1 + x1_pad << " " << y1 + y1_pad << " " << (x2 - x2_pad)-(x1 + x1_pad) << " " << (y2 - y2_pad)-(y1 + y1_pad) << std::endl;
    // Resize

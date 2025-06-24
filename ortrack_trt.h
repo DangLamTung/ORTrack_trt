@@ -55,8 +55,8 @@ struct Config {
     // std::vector<float> window;
     float template_factor = 2.0;
     float search_factor = 4.5; // 5.0
-    int template_size = 112; //192
-    int search_size = 224; // 384
+    int template_size = 128; //192
+    int search_size = 256; // 384
     int stride = 16;
     int feat_sz = 14; // 24
     int update_interval = 200;
@@ -77,7 +77,9 @@ private:
 
     const char* OUTPUT_BLOB_PREDBOXES_NAME = "pred_boxes"; 
     const char* OUTPUT_BLOB_PREDSCORES_NAME = "score_map"; 
-
+    const char* OUTPUT_BLOB_BACKBONE_FEAT_NAME = "backbone_feat"; 
+    const char* OUTPUT_BLOB_OFFSET_NAME = "offset_map"; 
+    const char* OUTPUT_BLOB_SIZEMAP_NAME = "size_map"; 
     char *trt_model_stream = nullptr;
     
     size_t size{0};
