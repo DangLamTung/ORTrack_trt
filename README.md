@@ -10,7 +10,7 @@ Archived ~430FPS on GTX1650 and ~100FPS on Jetson Xavier NX (distilled model)
 For ONNX, install the onnxruntime, change the path in ORTrack_pyonnx/or_tracker_ort.py and run.
 
 
-# 2. MixformerV2 TensorRT version inference with CPP and python
+# 2. ORTrack TensorRT version inference with CPP and python
 Assume that you have configured Tensorrt, use onnx2trt to convert the onnx model to engine on your GPU platform, and then start compilation and execution.To create the TensorRT model, run the convert_model_trt.sh file to create TensorRT model, then build the program:
 
 ## cpp version 
