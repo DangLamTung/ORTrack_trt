@@ -26,10 +26,10 @@ $ cmake .. && make
 & ./ortracker-trt ../ortracker.trt  ../target.mp4
 ```
 ## python version
-Modify the video path in ORTrack_trt/mixformer-pytrt/mf_tracker_trt.py，and mkdir model file_dir, then download the onnx file and put onnx file into file_dir.
+Modify the video path in ORTrack_trt/ORTrack_pytrt/ortracker_trt.py，and mkdir model file_dir, then download the onnx file and put onnx file into file_dir. Run the convert onnx - tensorrt script
 ```
 $ cd ORTrack_pyonnx
-$ python ORTrack_pytrt/mf_tracker_trt.py
+$ python ORTrack_pytrt/ortracker_trt.py
 ```
 Note: In addition to simplification when converting the onnx model, it is important to ensure that the shape of the data input to the engine model and the corresponding underlying data are continuous.
 
